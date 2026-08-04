@@ -50,3 +50,5 @@ elif Operator == "*":
 elif Operator == "/":
     print (f"{Number_1}{Operator}{Number_2}={Number_1 / Number_2}")
 
+#Create a simple quiz progream with 3 questions. At the end of teh quiz, display score/
+
