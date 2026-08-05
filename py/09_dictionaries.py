@@ -73,5 +73,5 @@ student_records["student"]["student_001"]["age"] = 20
 
 # Exercise 4: Loop through the dictionary and print each student's information in this format:"Student ID: [id], Name: [name], Major: [major]
 
-for student_id, info in student_records["student"].items():
-    print(f"Student ID: {student_id}, Name: {info['name']}, Major: {info['major']}")
+for student_id in student_records["student"]:
+    print(f"Student ID: {student_id}, Name: {student_records['student'][student_id]['name']}, Major: {student_records['student'][student_id]['major']}")
