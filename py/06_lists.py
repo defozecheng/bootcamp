@@ -37,7 +37,18 @@
 
 # Exercise 1: Create a grocery list and perform various opetations.
 
+# groceries_list = ["apple","milk","bread","egg"]
+# groceries_list.append("chicken")
+# groceries_list.insert(1,"orange")
+# groceries_list.remove("bread")
 
-
+# print(groceries_list)
 
 # Exercise 2: Write a program that finds the largest and smallest number in list.
+
+numbers = [55, 1, 3, 95, 36, 74, 22]
+
+numbers.sort()
+
+print(f"""Smallest number: {numbers[0]}
+Largest number: {numbers[-1]}""")
