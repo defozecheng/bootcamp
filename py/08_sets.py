@@ -37,5 +37,5 @@ subjects = set()
 for grade in grades:
     subjects.add(grade[1])
 
-print(names)
-print(subjects)
+print(f"Unique student : {names}")
+print(f"Unique subject : {subjects}")
