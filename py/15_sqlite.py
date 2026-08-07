@@ -91,14 +91,17 @@ class DatabaseManager:
         
     def get_user_posts(self, user_id):
         """Get posts by user"""
+
         with sqlite3.connect(self.db_name) as conn:
             cursor = conn.cursor()
+
             cursor.execute('''
                 SELECT p.id, p.title, p.content, p.created_at
                 FROM posts p
                 WHERE p.user_id = ?
                 ORDER BY p.created_at DESC
             ''', (user_id,))
+
             return cursor.fetchall()
 
 # # # Test SELECT
@@ -118,8 +121,10 @@ class DatabaseManager:
 
         with sqlite3.connect(self.db_name) as conn:
             cursor = conn.cursor()
+
             cursor.execute("DELETE FROM posts WHERE user_id = ?",(user_id,))
             cursor.execute("DELETE FROM users WHERE id = ?",(user_id,) )
+            
             return cursor.rowcount > 0
 
 # # Test DELETE
