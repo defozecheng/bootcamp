@@ -90,4 +90,12 @@ class Character:
 
     def heal(self):
         self.health += 10
-       
+
+player = Character()
+
+print(f"Health: {player.health}")
+player.attack()
+player.heal()
+print(f"Heal! Health: {player.health}")
+
+
