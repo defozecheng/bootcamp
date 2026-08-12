@@ -79,8 +79,15 @@
 # print(account.get_transaction_history())
 
 
-# Ecercise: Create a simple game character class with health, attack andheal methods.
+# Ecercise: Create a simple game character class with health, attack and heal methods.
 
 class Character:
-    def __init__(self,health = 100, attack = 1, heal):
-        
+    def __init__(self,health = 100):
+        self.health = health
+
+    def attack(self):
+        print("Character attacks!")
+
+    def heal(self):
+        self.health += 10
+       
