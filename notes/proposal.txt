@@ -49,15 +49,13 @@ Mileage: 118,500 km
 
 Next Service: 120,000 km Due in: 1,500 km
 
-4.  AI Text Assistant Users can ask simple car-related questions.
+4.  AI Text Assistant Users can ask simple car-related questions.(optional)
 
 Example: User: What does engine coolant do? AI: Engine coolant helps
 regulate engine temperature and prevent overheating.
 
 PROJECT FLOW
 
-Add Vehicle -> Record Maintenance -> Check Next Service -> Ask AI
+Add Vehicle -> Record Maintenance -> Check Next Service -> Ask AI(optional)
 
-TECHNOLOGY
 
-Python + FastAPI + MongoDB + Simple Frontend + Text-to-Text AI

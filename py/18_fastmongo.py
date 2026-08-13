@@ -5,7 +5,7 @@ from pydantic import BaseModel, EmailStr
 from typing import List, Optional
 from datetime import datetime
 from bson.objectid import ObjectId
-from mongo_database import DatabaseManager
+from mongo_db import DatabaseManager
 import os
 from dotenv import load_dotenv
 
