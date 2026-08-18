@@ -106,7 +106,7 @@ class DatabaseManager:
 
             self.maintenance_records_collection.delete_many({"car_id": car_object_id})
             result = self.cars_collection.delete_one({"_id": car_object_id})
-            return result.delete_count > 0
+            return result.deleted_count > 0
         except Exception as e:
             print(f"Error deleting car: {e}")
             return False
@@ -209,7 +209,7 @@ class DatabaseManager:
                 maintenance_record_object_id = record_id
 
             result = self.maintenance_records_collection.delete_one({"_id": maintenance_record_object_id})
-            return result.delete_count > 0
+            return result.deleted_count > 0
         except Exception as e:
             print(f"Error deleting record: {e}")
             return False
