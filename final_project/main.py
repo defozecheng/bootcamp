@@ -33,7 +33,7 @@ class CarResponse(BaseModel):
 
 class MaintenanceRecordCreate(BaseModel):
     car_id: str
-    sv_type: str
+    sv_type: List[str]
     sv_date: datetime
     sv_mileage: int
     sv_interval: int
@@ -43,7 +43,7 @@ class MaintenanceRecordCreate(BaseModel):
 class MaintenanceRecordResponse(BaseModel):
     record_id:str
     car_id: str
-    sv_type: str
+    sv_type: List[str]
     sv_date: datetime
     sv_mileage: int
     sv_interval: int
