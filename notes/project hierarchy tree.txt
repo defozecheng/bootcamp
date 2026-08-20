@@ -1,0 +1,586 @@
+==================================================
+1) database.py
+==================================================
+
+database.py
+│
+├── imports
+│   ├── pymongo
+│   ├── MongoClient
+│   ├── ObjectId
+│   ├── datetime
+│   ├── os
+│   └── dotenv
+│
+├── load_dotenv()
+│
+└── class DatabaseManager
+    │
+    ├── __init__()
+    │   ├── get MongoDB connection string
+    │   ├── MongoClient(...)
+    │   └── init_database()
+    │
+    ├── init_database()
+    │   ├── create/select database
+    │   ├── cars collection
+    │   ├── maintenance_records collection
+    │   ├── create unique index
+    │   │   └── cars.car_plate
+    │   └── create index
+    │       └── maintenance_records.car_id
+    │
+    │
+    ├── CAR FUNCTIONS
+    │
+    ├── create_car(...)
+    │   ├── build car_data dictionary
+    │   ├── cars.insert_one(car_data)
+    │   └── return inserted_id
+    │
+    ├── get_all_cars()
+    │   ├── cars.find()
+    │   ├── loop through cars
+    │   ├── convert _id to string
+    │   └── return cars
+    │
+    ├── get_car(car_id)
+    │   ├── ObjectId(car_id)
+    │   ├── cars.find_one(...)
+    │   ├── if car found
+    │   │   └── convert _id to string
+    │   └── return car
+    │
+    ├── update_car(car_id, ...)
+    │   ├── build update_data
+    │   ├── cars.update_one(...)
+    │   └── return result.modified_count > 0
+    │
+    ├── delete_car(car_id)
+    │   ├── delete maintenance records for car
+    │   ├── cars.delete_one(...)
+    │   └── return delete result
+    │
+    │
+    ├── MAINTENANCE RECORD FUNCTIONS
+    │
+    ├── create_maintenance_record(...)
+    │   ├── build maintenance_data dictionary
+    │   ├── maintenance_records.insert_one(...)
+    │   └── return inserted_id
+    │
+    ├── get_car_maintenance_records(car_id)
+    │   ├── maintenance_records.find(...)
+    │   ├── loop through records
+    │   ├── convert _id to string
+    │   └── return records
+    │
+    ├── get_maintenance_record(record_id)
+    │   ├── ObjectId(record_id)
+    │   ├── maintenance_records.find_one(...)
+    │   ├── if record found
+    │   │   └── convert _id to string
+    │   └── return record
+    │
+    ├── update_maintenance_record(record_id, ...)
+    │   ├── build update_data
+    │   ├── maintenance_records.update_one(...)
+    │   └── return result.modified_count > 0
+    │
+    ├── delete_maintenance_record(record_id)
+    │   ├── maintenance_records.delete_one(...)
+    │   └── return delete result
+    │
+    └── close_connection()
+        └── close MongoDB client
+
+
+==================================================
+2) main.py
+==================================================
+
+main.py
+│
+├── imports
+│   ├── FastAPI
+│   ├── HTTPException
+│   ├── status
+│   ├── BaseModel
+│   ├── List
+│   ├── datetime
+│   ├── ObjectId
+│   └── DatabaseManager
+│
+├── load_dotenv()
+│
+├── app = FastAPI(...)
+│
+├── PYDANTIC MODELS
+│
+├── class CarCreate(BaseModel)
+│   ├── name
+│   ├── phone
+│   ├── car_plate
+│   ├── brand
+│   ├── model
+│   ├── year
+│   └── current_mileage
+│
+├── class CarUpdate(BaseModel)
+│   └── car update fields
+│
+├── class CarResponse(BaseModel)
+│   ├── id
+│   ├── CarCreate fields
+│   └── created_at
+│
+├── class MaintenanceRecordCreate(BaseModel)
+│   ├── car_id
+│   ├── sv_type
+│   ├── sv_date
+│   ├── sv_mileage
+│   ├── sv_interval
+│   ├── cost
+│   └── notes
+│
+├── class MaintenanceRecordUpdate(BaseModel)
+│   └── maintenance update fields
+│
+├── class MaintenanceRecordResponse(BaseModel)
+│   ├── record_id
+│   ├── MaintenanceRecordCreate fields
+│   └── created_at
+│
+├── DATABASE CONNECTION
+│   └── try
+│       ├── db = DatabaseManager()
+│       └── except
+│           └── db = None
+│
+├── ROOT API
+│   └── root()
+│       └── GET /
+│
+├── CAR API
+│
+├── create_car(...)
+│   └── POST /cars/
+│       ├── db.create_car(...)
+│       ├── if successful
+│       │   └── return result
+│       └── else
+│           └── raise HTTPException
+│
+├── get_all_cars()
+│   └── GET /cars/
+│       ├── db.get_all_cars()
+│       ├── loop through cars
+│       └── return CarResponse
+│
+├── get_car(car_id)
+│   └── GET /cars/{car_id}
+│       ├── validate ID
+│       ├── db.get_car(car_id)
+│       ├── if car found
+│       │   └── return CarResponse
+│       └── else
+│           └── raise HTTPException
+│
+├── update_car(car_id, car_update)
+│   └── PUT /cars/{car_id}
+│       ├── validate ID
+│       ├── db.update_car(...)
+│       ├── if successful
+│       │   └── return success
+│       └── else
+│           └── raise HTTPException
+│
+├── delete_car(car_id)
+│   └── DELETE /cars/{car_id}
+│       ├── validate ID
+│       ├── db.delete_car(car_id)
+│       ├── if successful
+│       │   └── return success
+│       └── else
+│           └── raise HTTPException
+│
+├── MAINTENANCE RECORD API
+│
+├── create_maintenance_record(...)
+│   └── POST /maintenance/
+│       ├── validate car_id
+│       ├── db.create_maintenance_record(...)
+│       ├── if successful
+│       │   └── return record_id
+│       └── else
+│           └── raise HTTPException
+│
+├── get_car_maintenance_records(car_id)
+│   └── GET /maintenance/car/{car_id}
+│       ├── validate car_id
+│       ├── db.get_car_maintenance_records(car_id)
+│       └── return records
+│
+├── get_maintenance_record(record_id)
+│   └── GET /maintenance/{record_id}
+│       ├── validate record_id
+│       ├── db.get_maintenance_record(record_id)
+│       └── return record
+│
+├── update_maintenance_record(record_id, ...)
+│   └── PUT /maintenance/{record_id}
+│       ├── validate record_id
+│       ├── db.update_maintenance_record(...)
+│       ├── if successful
+│       │   └── return success
+│       └── else
+│           └── raise HTTPException
+│
+└── delete_maintenance_record(record_id)
+    └── DELETE /maintenance/{record_id}
+        ├── validate record_id
+        ├── db.delete_maintenance_record(record_id)
+        ├── if successful
+        │   └── return success
+        └── else
+            └── raise HTTPException
+
+
+==================================================
+3) streamlit_app.py
+==================================================
+
+streamlit_app.py
+│
+├── imports
+│   ├── streamlit
+│   ├── requests
+│   ├── pandas
+│   └── datetime
+│
+├── API helper functions
+│
+├── check_api_connection()
+│   └── GET FastAPI root
+│
+├── create_car(...)
+│   └── POST /cars/
+│
+├── get_all_cars()
+│   └── GET /cars/
+│
+├── get_car(...)
+│   └── GET /cars/{car_id}
+│
+├── update_car(...)
+│   └── PUT /cars/{car_id}
+│
+├── delete_car(...)
+│   └── DELETE /cars/{car_id}
+│
+├── create_maintenance_record(...)
+│   └── POST /maintenance/
+│
+├── get_car_maintenance_records(...)
+│   └── GET /maintenance/car/{car_id}
+│
+├── update_maintenance_record(...)
+│   └── PUT /maintenance/{record_id}
+│
+├── delete_maintenance_record(...)
+│   └── DELETE /maintenance/{record_id}
+│
+│
+├── cars_page()
+│   │
+│   ├── st.header()
+│   │
+│   ├── tab1 = Add Car
+│   │   └── st.form()
+│   │       ├── name
+│   │       ├── phone
+│   │       ├── car plate
+│   │       ├── brand
+│   │       ├── model
+│   │       ├── year
+│   │       ├── current mileage
+│   │       └── submit
+│   │           └── create_car(...)
+│   │
+│   ├── tab2 = View Cars
+│   │   ├── get_all_cars()
+│   │   ├── display dataframe
+│   │   ├── car_options
+│   │   ├── select car
+│   │   └── display individual car
+│   │
+│   └── tab3 = Manage Car
+│       ├── get_all_cars()
+│       ├── car_options
+│       ├── select car
+│       ├── selected_car
+│       │
+│       └── if selected_car
+│           ├── col1 = Update
+│           │   └── st.form()
+│           │       ├── new_name
+│           │       ├── new_phone
+│           │       ├── new_car_plate
+│           │       ├── new_brand
+│           │       ├── new_model
+│           │       ├── new_year
+│           │       ├── new_current_mileage
+│           │       └── submit
+│           │           └── update_car(...)
+│           │
+│           └── col2 = Delete
+│               ├── Delete Car button
+│               └── delete_car(...)
+│
+│
+├── maintenance_record_page()
+│   │
+│   ├── st.header()
+│   │
+│   ├── get_all_cars()
+│   │
+│   ├── if no cars
+│   │   ├── warning
+│   │   └── return
+│   │
+│   ├── car_options
+│   │
+│   ├── tab1 = Create Maintenance Record
+│   │   └── st.form()
+│   │       ├── select car
+│   │       ├── service types
+│   │       │   └── multiselect
+│   │       ├── service date
+│   │       ├── service mileage
+│   │       ├── service interval
+│   │       ├── cost
+│   │       ├── notes
+│   │       └── submit
+│   │           ├── get car_id
+│   │           ├── convert date to datetime
+│   │           └── create_maintenance_record(...)
+│   │
+│   ├── tab2 = View Maintenance Record
+│   │   ├── select car
+│   │   ├── get car_id
+│   │   ├── get_car_maintenance_records(car_id)
+│   │   │
+│   │   └── if records found
+│   │       └── for maintenance_record in maintenance_records
+│   │           ├── join service types
+│   │           ├── st.expander()
+│   │           ├── service date
+│   │           ├── service mileage
+│   │           ├── service interval
+│   │           ├── cost
+│   │           ├── notes
+│   │           └── created date
+│   │
+│   └── tab3 = Manage Maintenance Record
+│       ├── select car
+│       ├── get car_id
+│       ├── get_car_maintenance_records(car_id)
+│       │
+│       └── if records found
+│           ├── record_options
+│           ├── select maintenance record
+│           ├── selected_record_id
+│           ├── selected_record
+│           │
+│           └── if selected_record
+│               ├── col1 = Update Record
+│               │   └── st.form()
+│               │       ├── service type
+│               │       ├── service date
+│               │       ├── service mileage
+│               │       ├── service interval
+│               │       ├── cost
+│               │       ├── notes
+│               │       └── submit
+│               │           ├── convert date to datetime
+│               │           └── update_maintenance_record(...)
+│               │
+│               └── col2 = Delete Record
+│                   ├── Delete Record button
+│                   └── delete_maintenance_record(...)
+│
+│
+├── dashboard_page()
+│   │
+│   ├── st.header()
+│   │
+│   ├── get_all_cars()
+│   │
+│   ├── calculate total cars
+│   │
+│   ├── get maintenance records
+│   │
+│   ├── calculate total maintenance records
+│   │
+│   ├── calculate total maintenance cost
+│   │
+│   ├── calculate average service cost
+│   │
+│   ├── st.metric()
+│   │   ├── Total Cars
+│   │   ├── Maintenance Records
+│   │   ├── Total Maintenance Cost
+│   │   └── Average Service Cost
+│   │
+│   └── Next Service Overview
+│       ├── loop through cars
+│       ├── get maintenance records for each car
+│       ├── calculate next service mileage
+│       ├── calculate due mileage
+│       ├── determine status
+│       │   ├── Due / Overdue
+│       │   ├── Due Soon
+│       │   └── OK
+│       └── display dataframe
+│
+│
+└── main()
+    │
+    ├── page title
+    ├── check_api_connection()
+    │
+    ├── sidebar
+    │   └── Navigation selectbox
+    │       ├── Dashboard
+    │       ├── Car
+    │       └── Maintenance Records
+    │
+    ├── if Dashboard
+    │   └── dashboard_page()
+    │
+    ├── elif Car
+    │   └── cars_page()
+    │
+    └── elif Maintenance Records
+        └── maintenance_record_page()
+
+
+==================================================
+IMPORTANT: HOW THE 3 FILES CONNECT
+==================================================
+
+USER
+│
+└── Streamlit
+    │
+    └── streamlit_app.py
+        │
+        └── requests
+            │
+            ▼
+        FastAPI
+        │
+        └── main.py
+            │
+            └── DatabaseManager
+                │
+                ▼
+            database.py
+                │
+                ▼
+            MongoDB Atlas
+
+
+==================================================
+EXAMPLE: CREATE MAINTENANCE RECORD FLOW
+==================================================
+
+User fills form
+│
+└── streamlit_app.py
+    │
+    └── create_maintenance_record(...)
+        │
+        └── POST request
+            │
+            ▼
+        main.py
+        │
+        └── POST /maintenance/
+            │
+            └── MaintenanceRecordCreate
+                │
+                └── db.create_maintenance_record(...)
+                    │
+                    ▼
+                database.py
+                    │
+                    └── maintenance_records.insert_one(...)
+                        │
+                        ▼
+                    MongoDB Atlas
+
+
+==================================================
+EXAMPLE: VIEW MAINTENANCE RECORD FLOW
+==================================================
+
+User selects car
+│
+└── streamlit_app.py
+    │
+    ├── get car_id from car_options
+    │
+    └── get_car_maintenance_records(car_id)
+        │
+        └── GET request
+            │
+            ▼
+        main.py
+        │
+        └── GET /maintenance/car/{car_id}
+            │
+            └── db.get_car_maintenance_records(car_id)
+                │
+                ▼
+            database.py
+                │
+                └── maintenance_records.find(...)
+                    │
+                    ▼
+                MongoDB Atlas
+                    │
+                    ▼
+                records returned
+                    │
+                    ▼
+                main.py
+                    │
+                    ▼
+                streamlit_app.py
+                    │
+                    └── display records
+
+
+==================================================
+SIMPLE WAY TO EXPLAIN TO TEACHER
+==================================================
+
+database.py
+└── Handles MongoDB database operations
+
+main.py
+└── Handles FastAPI backend and API endpoints
+
+streamlit_app.py
+└── Handles frontend / user interface
+
+Overall flow:
+
+Streamlit Frontend
+        ↓
+FastAPI Backend
+        ↓
+DatabaseManager
+        ↓
+MongoDB Atlas

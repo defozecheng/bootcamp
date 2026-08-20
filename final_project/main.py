@@ -234,6 +234,8 @@ async def create_maintenance_record(maintenance_record: MaintenanceRecordCreate)
             maintenance_record.notes
         )
         if record_id:
+            if maintenance_record.sv_mileage > car["current_mileage"]:
+                db.update_car_mileage(maintenance_record.car_id, maintenance_record.sv_mileage)
             return{"message": "Record created successfully", "record_id": record_id}
         else:
             raise HTTPException(

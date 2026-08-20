@@ -177,7 +177,7 @@ def cars_page():
                 model = st.text_input("Model", placeholder="Enter car model")
             with col3:
                 year = st.number_input("Year", min_value=1950,max_value=2026, value=2025)
-                current_mileage = st.number_input("Current Mileage",placeholder=" Enter current mileage")
+                current_mileage = st.number_input("Current Mileage",placeholder=" Enter current mileage", min_value=0, step=1000)
 
             submitted = st.form_submit_button("Create Car", type="primary")
 
@@ -253,7 +253,7 @@ def cars_page():
                             new_brand = st.selectbox("Select Car Brand", brands, index=brands.index(selected_car['brand']))
                             new_model = st.text_input("Model", value=selected_car['model'])
                             new_year = st.number_input("Year", min_value=1950,max_value=2026, value=selected_car['year'])
-                            new_current_mileage = st.number_input("Current Mileage", value=selected_car['current_mileage'])
+                            new_current_mileage = st.number_input("Current Mileage", value=selected_car['current_mileage'], min_value=0, step=1000)
                             if st.form_submit_button("Update Car", type="primary"):
                                 result, update_success = update_car(selected_car_id, new_name, new_phone, new_car_plate, new_brand, new_model, new_year, new_current_mileage)
                                 if update_success:
@@ -291,6 +291,10 @@ def maintenance_record_page():
         st.subheader("➕ Create New Maintenance Record")
         with st.form("create_record_form", clear_on_submit=True):
             selected_car_display = st.selectbox("Select Car", options=list(car_options.keys()),key="create_record_car")
+            selected_car_id = car_options[selected_car_display]
+            selected_car = next((car for car in cars if car["id"] == selected_car_id),None)
+            if selected_car:st.info(f"🚗 Current Mileage: {selected_car['current_mileage']:,} km")
+
 
             types = ["Engine Oil", "Oil Filter", "Air Filter Cleaning", "Tyre Pressure Check",
                     "Engine Air Filter Replacement", "Cabin Air Filter Replacement", "Tyre Rotation and Balancing",
@@ -298,16 +302,18 @@ def maintenance_record_page():
                     " Engine Coolant Flush", "Spark Plug Replacement", "Fuel Filter Replacement"]
             sv_type = st.multiselect("Select Service Type", types)
             sv_date = st.date_input("Service Date")
-            sv_mileage = st.number_input("Service Mileage", min_value=0, step=5000,value=0)
-            sv_interval= st.selectbox("Service Interval", [5000,10000,15000,20000])
-            cost = st.number_input("Cost", min_value=0.0, value=0.0, step=10.0)
+            sv_mileage = st.number_input("Current Mileage at Service (km)", min_value=0, step=1000,value=int(selected_car["current_mileage"]))
+            sv_interval= st.selectbox("Service Interval (km)", [5000,10000,15000,20000])
+            next_service_mileage = sv_mileage + sv_interval
+            st.info(f"Next Service Mileage: {next_service_mileage:,} km")
+            cost = st.number_input("Cost (RM)", min_value=0.0, value=0.0, step=10.0)
             notes = st.text_input("Notes", placeholder="Remarks")
 
             submitted = st.form_submit_button("Create Maintenance Record", type= "primary")
 
             if submitted:
                 if selected_car_display and sv_type and sv_date:
-                    car_id = car_options[selected_car_display]
+                    car_id = selected_car_id
                     sv_date_datetime = datetime.combine(sv_date, datetime.min.time())
                     result, record_success = create_maintenance_record(car_id, sv_type, sv_date_datetime, sv_mileage, sv_interval, cost, notes)
                     if record_success:
@@ -332,9 +338,11 @@ def maintenance_record_page():
                     service_types = ", ".join(maintenance_record["sv_type"])
                     with st.expander(f" {service_types}"f"(ID:{maintenance_record['record_id'][:8]}...)"):
                             st.write(f"**Service Date:** {maintenance_record['sv_date']}")
-                            st.write(f"**Service Mileage:** {maintenance_record['sv_mileage']}")
-                            st.write(f"**Service Interval** {maintenance_record['sv_interval']}")
-                            st.write(f"**Cost:** {maintenance_record['cost']}")
+                            st.write(f"**Current Mileage at Service:** {maintenance_record['sv_mileage']:,}km")
+                            st.write(f"**Service Interval** {maintenance_record['sv_interval']:,}km")
+                            next_service_mileage = (maintenance_record["sv_mileage"] + maintenance_record["sv_interval"])
+                            st.write(f"**Next Service Mileage:** {next_service_mileage:,} km")
+                            st.write(f"**Cost:** RM {maintenance_record['cost']:,.2f}")
                             st.write(f"**Notes:** {maintenance_record['notes']}")
                             created_at = pd.to_datetime(maintenance_record["created_at"]).strftime("%Y-%m-%d %H:%M:%S")
                             st.write("**Created:**", created_at)
@@ -371,9 +379,11 @@ def maintenance_record_page():
                         with st.form("update_record_form"):
                             new_sv_type = st.multiselect("Service type", types, default=(selected_record['sv_type']))
                             new_sv_date = st.date_input("Service date", value=pd.to_datetime(selected_record['sv_date']).date())
-                            new_sv_mileage = st.number_input("Service Mileage", value=selected_record['sv_mileage'], min_value=0,step=5000)
-                            new_sv_interval = st.selectbox("Service Interval", intervals, index=intervals.index(selected_record['sv_interval']))
-                            new_cost = st.number_input("Cost", min_value=0.0, value=float(selected_record['cost']), step=10.0)
+                            new_sv_mileage = st.number_input("Current Mileage at Service (km)", value=selected_record['sv_mileage'], min_value=0,step=1000)
+                            new_sv_interval = st.selectbox("Service Interval (km)", intervals, index=intervals.index(selected_record['sv_interval']))
+                            new_next_service_mileage = (new_sv_mileage + new_sv_interval)
+                            st.info(f"Next Service Mileage: {new_next_service_mileage:,} km")
+                            new_cost = st.number_input("Cost (RM)", min_value=0.0, value=float(selected_record['cost']), step=10.0)
                             new_notes = st.text_input("Notes", value=selected_record['notes'])
                             if st.form_submit_button("Update Record", type="primary"):
                                 new_sv_date_datetime = datetime.combine(new_sv_date,datetime.min.time())

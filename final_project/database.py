@@ -201,6 +201,13 @@ class DatabaseManager:
             print(f"Error update record: {e}")
             return False
 
+    def update_car_mileage(self, car_id, current_mileage):
+        result = self.cars.update_one(
+            {"_id": ObjectId(car_id)},
+            {"$set": {"current_mileage": current_mileage}}
+        )
+        return result.modified_count > 0
+
     def delete_maintenance_record(self, record_id):
         try:
             if ObjectId.is_valid(record_id):
