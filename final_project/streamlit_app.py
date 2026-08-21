@@ -1,8 +1,32 @@
 import streamlit as st
+from agents.chat_agent import create_chat_agent
 import requests
 import pandas as pd
 from datetime import datetime
 import json
+
+CAR_MODELS = {
+    "BMW": ["1 Series", "2 Series", "3 Series", "5 Series", "7 Series", "X1", "X3", "X5", "X6", "iX"],
+    "BYD": ["Atto 2", "Atto 3", "Dolphin", "Seal", "Seal 6", "Sealion 5", "Sealion 7", "M6"],
+    "Chery": ["Tiggo 7 Pro", "Tiggo 8 Pro", "Tiggo Cross", "O5", "E5"],
+    "GWM/Haval": ["Haval H6", "Haval H6 HEV", "Haval H6 PHEV", "Haval Jolion", "Ora Good Cat", "Ora 07", "Tank 300", "Tank 500"],
+    "Honda": ["City", "City Hatchback", "Civic", "Accord", "HR-V", "CR-V", "BR-V", "WR-V"],
+    "iCAUR": ["03", "V23"],
+    "Isuzu": ["D-Max", "MU-X"],
+    "Jetour": ["Dashing", "VT9", "T2"],
+    "Leapmotor": ["C10", "B10"],
+    "Lexus": ["ES", "IS", "NX", "RX", "UX", "LM", "RZ", "LBX"],
+    "Mazda": ["Mazda2", "Mazda3", "Mazda6", "CX-3", "CX-30", "CX-5", "CX-8", "CX-60", "CX-80"],
+    "Mercedes-Benz": ["A-Class", "C-Class", "E-Class", "S-Class", "CLA", "GLA", "GLC", "GLE", "EQA", "EQE"],
+    "Mitsubishi": ["Triton", "Xpander", "Outlander", "ASX", "Attrage"],
+    "Nissan": ["Almera", "Serena", "X-Trail", "Navara", "Kicks", "Leaf"],
+    "Omoda/Jaecoo": ["Omoda 5", "Omoda E5", "Jaecoo J7", "Jaecoo J7 PHEV", "Jaecoo J8"],
+    "Perodua": ["Axia", "Bezza", "Myvi", "Alza", "Ativa", "Aruz", "Kancil", "Kelisa", "Viva"],
+    "Proton": ["Saga", "Persona", "Iriz", "S70", "X50", "X70", "X90", "e.MAS 5", "e.MAS 7"],
+    "Tesla": ["Model 3", "Model Y", "Model S", "Model X"],
+    "Toyota": ["Vios", "Yaris", "Corolla", "Corolla Cross", "Camry", "Hilux", "Fortuner", "Innova Zenix", "Veloz", "Alphard"],
+    "Zeekr": ["X", "7X", "009"]
+}
 
 st.set_page_config(
     page_title="Car Management Dashboard",
@@ -59,7 +83,8 @@ def update_car(car_id, name, phone, car_plate, brand, model, year, current_milea
                 "name": name, 
                 "phone": phone, 
                 "car_plate": car_plate, 
-                "brand": brand, "model": model, 
+                "brand": brand, 
+                "model": model, 
                 "year":year, 
                 "current_mileage": current_mileage}
         )
@@ -143,9 +168,9 @@ def main():
     st.success("✅ Connected to FASTAPI server")
 
     st.sidebar.title("Navigation")
-    page = st.sidebar.selectbox(
+    page = st.sidebar.radio(
         "Select Page",
-        ["🚗 Car", "🛠️ Maintenance Records", "📊 Dashboard"]
+        ["🚗 Car", "🛠️ Maintenance Records", "📊 Dashboard", "🤖 Car Assistant"]
     )
 
     if page == "🚗 Car":
@@ -154,6 +179,8 @@ def main():
         maintenance_record_page()
     elif page == "📊 Dashboard":
         dashboard_page()
+    elif page == "🤖 Car Assistant":
+        car_assistant_page()
 
 def cars_page():
     st.header("🚗 Car Management")
@@ -162,34 +189,29 @@ def cars_page():
 
     with tab1:
         st.subheader("➕ Add New Car")
-        with st.form("create_car_form", clear_on_submit=True):
-            col1, col2,col3 = st.columns(3)
-            with col1:
-                name = st.text_input("Name", placeholder="Enter car owner name")
-                phone = st.text_input("Phone Number", placeholder="Enter phone number")
-                car_plate = st.text_input("Car Plate Number", placeholder="Enter car plate number")
-            with col2:
-                brand = st.selectbox("Select Car Brand",["BMW", "BYD", "Chery", "GMW/Haval",
-                                        "Honda", "iCaur", "Isuzu", "Jetour", "Leapmotor",
-                                        "Lexus", "Mazda", "Mercedes-Benz", "Mitsubishi",
-                                        "Nissan", "Omada/Jaecoo", "Perodua", "Proton",
-                                        "Tesla", "Toyota", "Zeekr"])
-                model = st.text_input("Model", placeholder="Enter car model")
-            with col3:
-                year = st.number_input("Year", min_value=1950,max_value=2026, value=2025)
-                current_mileage = st.number_input("Current Mileage",placeholder=" Enter current mileage", min_value=0, step=1000)
+        
+        col1, col2,col3 = st.columns(3)
+        with col1:
+            name = st.text_input("Name", placeholder="Enter car owner name")
+            phone = st.text_input("Phone Number", placeholder="Enter phone number")
+            car_plate = st.text_input("Car Plate Number", placeholder="Enter car plate number")
+        with col2:
+            brand = st.selectbox("Select Car Brand", list(CAR_MODELS.keys()), key="create_brand")
+            model = st.selectbox("Select Car Model", CAR_MODELS[brand], key="create_model")
+        with col3:
+            year = st.number_input("Year", min_value=1950,max_value=2026, value=2025)
+            current_mileage = st.number_input("Current Mileage",placeholder=" Enter current mileage", min_value=0, step=1000)
 
-            submitted = st.form_submit_button("Create Car", type="primary")
+        if st.button("Create Car", type="primary"):
+            if name and phone and car_plate and brand and model:
+                result, success = create_car(name, phone, car_plate, brand, model, year, current_mileage)
 
-            if submitted:
-                if name and phone and car_plate and brand and model:
-                    result, success = create_car(name, phone, car_plate, brand, model, year, current_mileage)
-                    if success:
-                        st.success(f"✅ Car created successfully! ID: {result.get('car_id')}")
-                    else:
-                        st.error(f"❌ Error: {result.get('detail', 'Unknown error')}")
+                if success:
+                    st.success(f"✅ Car created successfully! ID: {result.get('car_id')}")
                 else:
-                    st.error("❌ Please fill in all fields")
+                    st.error(f"❌ Error: {result.get('detail', 'Unknown error')}")
+            else:
+                st.error("❌ Please fill in all fields")
 
     with tab2:
         st.subheader("🗂️ View Car Details")
@@ -241,17 +263,18 @@ def cars_page():
                     col1, col2 = st.columns(2)
                     with col1:
                         st.write("**Update Car Data**")
-                        brands = ["BMW", "BYD", "Chery", "GMW/Haval",
-                                "Honda", "iCaur", "Isuzu", "Jetour", "Leapmotor",
-                                "Lexus", "Mazda", "Mercedes-Benz", "Mitsubishi",
-                                "Nissan", "Omada/Jaecoo", "Perodua", "Proton",
-                                "Tesla", "Toyota", "Zeekr"]
-                        with st.form("update_car_form"):
+                        brand_list = list(CAR_MODELS.keys())
+                        new_brand = st.selectbox("Select Car Brand", brand_list, index=brand_list.index(selected_car["brand"]), key=f"update_brand_{selected_car_id}")
+                        model_list = CAR_MODELS[new_brand]
+                        if selected_car["model"] in model_list:
+                            model_index = model_list.index(selected_car["model"])
+                        else:
+                            model_index = 0
+                        new_model = st.selectbox("Select Car Model", model_list, index=model_index, key=f"update_model_{selected_car_id}")
+                        with st.form(f"update_car_form_{selected_car_id}"):
                             new_name = st.text_input("Name", value=selected_car['name'])
                             new_phone = st.text_input("Phone Number", value=selected_car['phone'])
                             new_car_plate = st.text_input("Car Plate Number", value=selected_car['car_plate'])
-                            new_brand = st.selectbox("Select Car Brand", brands, index=brands.index(selected_car['brand']))
-                            new_model = st.text_input("Model", value=selected_car['model'])
                             new_year = st.number_input("Year", min_value=1950,max_value=2026, value=selected_car['year'])
                             new_current_mileage = st.number_input("Current Mileage", value=selected_car['current_mileage'], min_value=0, step=1000)
                             if st.form_submit_button("Update Car", type="primary"):
@@ -289,39 +312,38 @@ def maintenance_record_page():
 
     with tab1:
         st.subheader("➕ Create New Maintenance Record")
-        with st.form("create_record_form", clear_on_submit=True):
-            selected_car_display = st.selectbox("Select Car", options=list(car_options.keys()),key="create_record_car")
-            selected_car_id = car_options[selected_car_display]
-            selected_car = next((car for car in cars if car["id"] == selected_car_id),None)
-            if selected_car:st.info(f"🚗 Current Mileage: {selected_car['current_mileage']:,} km")
+        selected_car_display = st.selectbox("Select Car", options=list(car_options.keys()),key="create_record_car")
+        selected_car_id = car_options[selected_car_display]
+        selected_car = next((car for car in cars if car["id"] == selected_car_id),None)
+        if selected_car:st.info(f"🚗 Current Mileage: {selected_car['current_mileage']:,} km")
 
 
-            types = ["Engine Oil", "Oil Filter", "Air Filter Cleaning", "Tyre Pressure Check",
-                    "Engine Air Filter Replacement", "Cabin Air Filter Replacement", "Tyre Rotation and Balancing",
-                    "Wheel Alignment", "Brake Pad Inspection","AT Fluid Change", "Brake Fluid FLush",
-                    " Engine Coolant Flush", "Spark Plug Replacement", "Fuel Filter Replacement"]
-            sv_type = st.multiselect("Select Service Type", types)
-            sv_date = st.date_input("Service Date")
-            sv_mileage = st.number_input("Current Mileage at Service (km)", min_value=0, step=1000,value=int(selected_car["current_mileage"]))
-            sv_interval= st.selectbox("Service Interval (km)", [5000,10000,15000,20000])
-            next_service_mileage = sv_mileage + sv_interval
-            st.info(f"Next Service Mileage: {next_service_mileage:,} km")
-            cost = st.number_input("Cost (RM)", min_value=0.0, value=0.0, step=10.0)
-            notes = st.text_input("Notes", placeholder="Remarks")
+        types = ["Engine Oil", "Oil Filter", "Air Filter Cleaning", "Tyre Pressure Check",
+                "Engine Air Filter Replacement", "Cabin Air Filter Replacement", "Tyre Rotation and Balancing",
+                "Wheel Alignment", "Brake Pad Inspection","AT Fluid Change", "Brake Fluid FLush",
+                " Engine Coolant Flush", "Spark Plug Replacement", "Fuel Filter Replacement"]
+        sv_type = st.multiselect("Select Service Type", types)
+        sv_date = st.date_input("Service Date")
+        sv_mileage = st.number_input("Current Mileage at Service (km)", min_value=0, step=1000, value=int(selected_car["current_mileage"]), key=f"service_mileage_{selected_car_id}")
+        sv_interval= st.selectbox("Service Interval (km)", [5000,10000,15000,20000])
+        next_service_mileage = sv_mileage + sv_interval
+        st.info(f"Next Service Mileage: {next_service_mileage:,} km")
+        cost = st.number_input("Cost (RM)", min_value=0.0, value=0.0, step=10.0)
+        notes = st.text_input("Notes", placeholder="Remarks")
 
-            submitted = st.form_submit_button("Create Maintenance Record", type= "primary")
+        submitted = st.button("Create Maintenance Record", type="primary")
 
-            if submitted:
-                if selected_car_display and sv_type and sv_date:
-                    car_id = selected_car_id
-                    sv_date_datetime = datetime.combine(sv_date, datetime.min.time())
-                    result, record_success = create_maintenance_record(car_id, sv_type, sv_date_datetime, sv_mileage, sv_interval, cost, notes)
-                    if record_success:
-                        st.success(f"✅ Maintenance record created successfully! ID: {result.get('record_id')}")
-                    else:
-                        st.error(f"❌ Error: {result.get('detail', 'Unknown error')}")
+        if submitted:
+            if selected_car_display and sv_type and sv_date:
+                car_id = selected_car_id
+                sv_date_datetime = datetime.combine(sv_date, datetime.min.time())
+                result, record_success = create_maintenance_record(car_id, sv_type, sv_date_datetime, sv_mileage, sv_interval, cost, notes)
+                if record_success:
+                    st.success(f"✅ Maintenance record created successfully! ID: {result.get('record_id')}")
                 else:
-                    st.error("❌ Please fill in all fields")
+                    st.error(f"❌ Error: {result.get('detail', 'Unknown error')}")
+            else:
+                st.error("❌ Please fill in all fields")
 
 
     with tab2:
@@ -376,7 +398,7 @@ def maintenance_record_page():
                                 "Wheel Alignment", "Brake Pad Inspection","AT Fluid Change", "Brake Fluid FLush",
                                 " Engine Coolant Flush", "Spark Plug Replacement", "Fuel Filter Replacement"]
                         intervals = [5000, 10000, 15000, 20000]
-                        with st.form("update_record_form"):
+                        with st.form(f"update_record_form_{selected_record_id}"):
                             new_sv_type = st.multiselect("Service type", types, default=(selected_record['sv_type']))
                             new_sv_date = st.date_input("Service date", value=pd.to_datetime(selected_record['sv_date']).date())
                             new_sv_mileage = st.number_input("Current Mileage at Service (km)", value=selected_record['sv_mileage'], min_value=0,step=1000)
@@ -519,6 +541,34 @@ def dashboard_page():
 
     else:
         st.info("No dashboard data available")
+
+def car_assistant_page():
+    st.header("🤖 Car Assistant")
+    st.write("Ask me anything about cars, maintenance, or your vehicle records.")
+
+    agent = create_chat_agent()  
+    if "messages" not in st.session_state:
+        st.session_state.messages = []
+    for message in st.session_state.messages:
+        with st.chat_message(message["role"]):
+            st.write(message["content"])
+
+    user_input = st.chat_input("Ask a question about your car...")
+    if user_input:
+        st.session_state.messages.append({"role": "user", "content": user_input})
+        with st.chat_message("user"):
+            st.write(user_input)
+        response = agent.invoke({
+            "messages": st.session_state.messages
+            })
+        answer_content = response["messages"][-1].content
+        if isinstance(answer_content, list):
+            answer = answer_content[0]["text"]
+        else:
+            answer = answer_content
+        st.session_state.messages.append({"role": "assistant", "content": answer})
+        with st.chat_message("assistant"):
+            st.write(answer)
 
 if __name__ == "__main__":
     main()

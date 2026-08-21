@@ -563,7 +563,7 @@ User selects car
 
 
 ==================================================
-SIMPLE WAY TO EXPLAIN TO TEACHER
+SIMPLE WAY TO EXPLAIN
 ==================================================
 
 database.py

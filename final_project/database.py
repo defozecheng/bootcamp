@@ -202,7 +202,7 @@ class DatabaseManager:
             return False
 
     def update_car_mileage(self, car_id, current_mileage):
-        result = self.cars.update_one(
+        result = self.cars_collection.update_one(
             {"_id": ObjectId(car_id)},
             {"$set": {"current_mileage": current_mileage}}
         )

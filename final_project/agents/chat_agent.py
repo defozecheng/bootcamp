@@ -47,6 +47,6 @@ if __name__ == "__main__":
     test_agent = create_chat_agent()
     print("\n=== Testing general question ===")
     response = test_agent.invoke({
-        "messages": [{"role": "user", "content": "Tell me about Turbo."}]
+        "messages": [{"role": "user", "content": "When is W123W due for the next service?"}]
     })
     print("Response:", response['messages'][-1].content)
