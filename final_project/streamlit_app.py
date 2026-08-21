@@ -4,6 +4,7 @@ import requests
 import pandas as pd
 from datetime import datetime
 import json
+import os
 
 CAR_MODELS = {
     "BMW": ["1 Series", "2 Series", "3 Series", "5 Series", "7 Series", "X1", "X3", "X5", "X6", "iX"],
@@ -168,10 +169,28 @@ def main():
     st.success("✅ Connected to FASTAPI server")
 
     st.sidebar.title("Navigation")
-    page = st.sidebar.radio(
-        "Select Page",
-        ["🚗 Car", "🛠️ Maintenance Records", "📊 Dashboard", "🤖 Car Assistant"]
-    )
+
+    if "staff_logged_in" not in st.session_state:
+        st.session_state.staff_logged_in = False
+
+    if st.session_state.staff_logged_in:
+        page = st.sidebar.radio("Select Page", ["🚗 Car",  "🛠️ Maintenance Records", "📊 Dashboard", "🤖 Car Assistant", "👤 Customer Portal"])
+
+        if st.sidebar.button("Staff Logout"):
+            st.session_state.staff_logged_in = False
+            st.rerun()
+    else:
+        page = "👤 Customer Portal"
+
+        with st.sidebar.expander("🔐 Staff Login"):
+            staff_password = st.text_input("Staff Password", type="password")
+            if st.button("Staff Login"):
+                if staff_password == os.getenv("STAFF_PASSWORD"):
+                    st.session_state.staff_logged_in = True
+                    st.success("✅ Staff login successful!")
+                    st.rerun()
+                else:
+                    st.error("❌ Invalid password")
 
     if page == "🚗 Car":
         cars_page()
@@ -181,6 +200,8 @@ def main():
         dashboard_page()
     elif page == "🤖 Car Assistant":
         car_assistant_page()
+    elif page == "👤 Customer Portal":
+        customer_portal_page()
 
 def cars_page():
     st.header("🚗 Car Management")
@@ -569,6 +590,160 @@ def car_assistant_page():
         st.session_state.messages.append({"role": "assistant", "content": answer})
         with st.chat_message("assistant"):
             st.write(answer)
+
+def customer_portal_page():
+    st.header("👤 Customer Portal")
+    st.write("Login to view your vehicle and maintenance information.")
+
+    if "customer_car" not in st.session_state:
+        st.session_state.customer_car = None
+
+    if st.session_state.customer_car is None:
+        car_plate = st.text_input("Car Plate Number", placeholder="Enter your car plate")
+        phone = st.text_input("Phone Number", placeholder="Enter your phone number")
+
+        if st.button("Login", type="primary"):
+            try:
+                response = requests.post(
+                    f"{API_BASE_URL}/customer/login",
+                    json={
+                        "car_plate": car_plate,
+                        "phone": phone
+                    }
+                )
+
+                if response.status_code == 200:
+                    data = response.json()
+                    st.session_state.customer_car = data["car"]
+                    st.success("✅ Login successful!")
+                    st.rerun()
+
+                else:
+                    error_data = response.json()
+                    st.error(f"❌ {error_data.get('detail', 'Login failed')}")
+
+            except Exception as e:
+                st.error(f"❌ Error: {str(e)}")
+
+    else:
+        car = st.session_state.customer_car
+
+        st.subheader("🚗 My Car")
+        if st.button("Logout"):
+            st.session_state.customer_car = None
+            st.rerun()
+
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("Car Plate", car["car_plate"])
+        with col2:
+            st.metric("Vehicle", f"{car['brand']} {car['model']}")
+        with col3:
+            st.metric("Current Mileage", f"{car['current_mileage']:,} km")
+
+        st.divider()
+        st.subheader("🔔 Service Status")
+
+        car_id = car["_id"]
+
+        maintenance_records, records_success = get_car_maintenance_records(car_id)
+
+        if records_success and maintenance_records:
+            latest_record = max(
+                maintenance_records,
+                key=lambda record: record["sv_mileage"]
+            )
+
+            last_service_mileage = latest_record["sv_mileage"]
+            service_interval = latest_record["sv_interval"]
+            next_service_mileage = last_service_mileage + service_interval
+            due_in = next_service_mileage - car["current_mileage"]
+
+            if due_in < 0:
+                status_text = "🔴 Overdue"
+                due_label = "Overdue By"
+                due_display = abs(due_in)
+
+            elif due_in == 0:
+                status_text = "🔴 Due Now"
+                due_label = "Due In"
+                due_display = 0
+
+            elif due_in <= 1000:
+                status_text = "🟠 Due Soon"
+                due_label = "Due In"
+                due_display = due_in
+
+            else:
+                status_text = "🟢 OK"
+                due_label = "Due In"
+                due_display = due_in
+
+            col1, col2, col3, col4 = st.columns(4)
+            with col1:
+                st.metric("Last Service", f"{last_service_mileage:,} km")
+            with col2:
+                st.metric("Next Service", f"{next_service_mileage:,} km")
+            with col3:
+                st.metric(due_label, f"{due_display:,} km")
+            with col4:
+                st.metric("Status", status_text)
+
+        else:
+            st.info("No maintenance records found.")   
+
+        st.divider()
+        st.subheader("📋 Maintenance History")
+
+        if records_success and maintenance_records:
+            history_data = []
+
+            for record in maintenance_records:
+                history_data.append({
+                    "Service Date": pd.to_datetime(record["sv_date"]).strftime("%Y-%m-%d"),
+                    "Mileage": f"{record['sv_mileage']:,} km",
+                    "Service Type": ", ".join(record["sv_type"]),
+                    "Cost": f"RM {record['cost']:,.2f}",
+                    "Notes": record["notes"] if record["notes"] else "-"
+                })
+            history_df = pd.DataFrame(history_data)
+            st.dataframe(history_df, use_container_width=True, hide_index=True)
+        else:
+            st.info("No maintenance history found.")
+
+        st.write("**Update Current Mileage**")
+
+        new_mileage = st.number_input(
+            "Current Mileage (km)",
+            min_value=int(car["current_mileage"]),
+            value=int(car["current_mileage"]),
+            step=100
+        )
+        if st.button("Update Mileage", type="primary"):
+            try:
+                response = requests.put(
+                    f"{API_BASE_URL}/customer/mileage",
+                    json={
+                        "car_plate": car["car_plate"],
+                        "phone": car["phone"],
+                        "current_mileage": new_mileage
+                    }
+                )
+                if response.status_code == 200:
+                    car["current_mileage"] = new_mileage
+                    st.session_state.customer_car = car
+                    st.success("✅ Mileage updated successfully!")
+                    st.rerun()
+                else:
+                    error_data = response.json()
+                    st.error(
+                        f"❌ {error_data.get('detail', 'Failed to update mileage')}"
+                    )
+            except Exception as e:
+                st.error(f"❌ Error: {str(e)}")
+
+
+
 
 if __name__ == "__main__":
     main()

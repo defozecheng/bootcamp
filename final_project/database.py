@@ -8,6 +8,16 @@ load_dotenv()
 
 mongo_uri = os.getenv('MONGODB_ATLAS_CLUSTER_URI')
 
+def normalize_phone(phone):
+    phone = phone.replace(" ", "").replace("-", "")
+
+    if phone.startswith("+60"):
+        phone = phone[1:]
+    elif phone.startswith("0"):
+        phone = "60" + phone[1:]
+
+    return phone
+
 class DatabaseManager:
     def __init__(self, db_name='car_maintenance_db', connection_string=mongo_uri):
         self.client = MongoClient(connection_string)
@@ -22,6 +32,25 @@ class DatabaseManager:
 
 
 # Car function
+
+    def get_car_by_customer(self, car_plate, phone):
+        try:
+            car = self.cars_collection.find_one({"car_plate": car_plate.upper()})
+            if not car:
+                return None
+
+            database_phone = normalize_phone(car["phone"])
+            customer_phone = normalize_phone(phone)
+
+            if database_phone != customer_phone:
+                return None
+
+            car["_id"] = str(car["_id"])
+            return car
+
+        except Exception as e:
+            print(f"Error verifying customer: {e}")
+            return None        
 
     def create_car(self, name, phone, car_plate, brand, model, year, current_mileage):
         try:

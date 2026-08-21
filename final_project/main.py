@@ -20,6 +20,15 @@ class CarCreate(BaseModel):
     year: int
     current_mileage: int
 
+class CustomerLogin(BaseModel):
+    car_plate: str
+    phone: str
+
+class CustomerMileageUpdate(BaseModel):
+    car_plate: str
+    phone: str
+    current_mileage: int
+
 class CarResponse(BaseModel):
     id: str
     name: str
@@ -62,6 +71,62 @@ async def root():
     return {"message": "MongoDB API", "version": "1.0.0"}
 
 # Car API
+
+@app.post("/customer/login")
+async def customer_login(customer: CustomerLogin):
+    try:
+        car = db.get_car_by_customer(customer.car_plate, customer.phone)
+        if not car:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid car plate or phone number."
+            )
+
+        return {"message": "Login successful", "car": car}
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Internal server error: {str(e)}"
+        )
+
+@app.put("/customer/mileage")
+async def update_customer_mileage(customer: CustomerMileageUpdate):
+    try:
+        car = db.get_car_by_customer(customer.car_plate, customer.phone)
+
+        if not car:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid car plate or phone number."
+            )
+        if customer.current_mileage < car["current_mileage"]:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="New mileage cannot be lower than current mileage."
+            )
+        
+        success = db.update_car_mileage(car["_id"], customer.current_mileage)
+        if success:
+            return {
+                "message": "Mileage updated successfully",
+                "current_mileage": customer.current_mileage
+            }
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Mileage was not updated."
+            )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Internal server error: {str(e)}"
+        )
 
 @app.post("/cars/", response_model=dict, status_code=status.HTTP_201_CREATED)
 async def create_car(car: CarCreate):
