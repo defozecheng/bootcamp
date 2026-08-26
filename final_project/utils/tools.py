@@ -96,6 +96,7 @@ def get_maintenance_history(car_plate: str) -> str:
             record_info = (
                 f"Service Type: {record.get('sv_type', 'N/A')}, "
                 f"Service Date: {record.get('sv_date', 'N/A')}, "
+                f"Next Service Date: {record.get('next_service_date', 'N/A')}, "
                 f"Mileage at Service: {record.get('sv_mileage', 'N/A')} km, "
                 f"Service Interval: {record.get('sv_interval', 'N/A')} km, "
                 f"Next Service Mileage: {next_service_mileage} km, "

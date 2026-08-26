@@ -44,9 +44,11 @@ class MaintenanceRecordCreate(BaseModel):
     car_id: str
     sv_type: List[str]
     sv_date: datetime
+    next_service_date: datetime
     sv_mileage: int
     sv_interval: int
     cost: float
+    paid_amount: float
     notes: str
 
 class MaintenanceRecordResponse(BaseModel):
@@ -54,9 +56,11 @@ class MaintenanceRecordResponse(BaseModel):
     car_id: str
     sv_type: List[str]
     sv_date: datetime
+    next_service_date: datetime | None = None
     sv_mileage: int
     sv_interval: int
     cost: float
+    paid_amount: float  = 0.0
     notes: str
     created_at: datetime
 
@@ -289,13 +293,20 @@ async def create_maintenance_record(maintenance_record: MaintenanceRecordCreate)
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Car not found"
             )
+        if maintenance_record.paid_amount > maintenance_record.cost:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Paid Amount cannot be greater than Cost."
+            )
         record_id = db.create_maintenance_record(
             maintenance_record.car_id,
             maintenance_record.sv_type,
             maintenance_record.sv_date,
+            maintenance_record.next_service_date,
             maintenance_record.sv_mileage,
             maintenance_record.sv_interval,
             maintenance_record.cost,
+            maintenance_record.paid_amount,
             maintenance_record.notes
         )
         if record_id:
@@ -339,9 +350,11 @@ async def get_car_maintenance_records(car_id: str):
                 car_id=maintenance_record["car_id"],
                 sv_type=maintenance_record['sv_type'],
                 sv_date=maintenance_record['sv_date'],
+                next_service_date=maintenance_record.get("next_service_date"),
                 sv_mileage=maintenance_record['sv_mileage'],
                 sv_interval=maintenance_record['sv_interval'],
                 cost=maintenance_record['cost'],
+                paid_amount=maintenance_record.get('paid_amount', 0.0),
                 notes=maintenance_record['notes'],
                 created_at=maintenance_record["created_at"]
             )
@@ -375,9 +388,11 @@ async def get_maintenance_record(record_id: str):
                 car_id=maintenance_record["car_id"],
                 sv_type=maintenance_record['sv_type'],
                 sv_date=maintenance_record['sv_date'],
+                next_service_date=maintenance_record.get("next_service_date"),
                 sv_mileage=maintenance_record['sv_mileage'],
                 sv_interval=maintenance_record['sv_interval'],
                 cost=maintenance_record['cost'],
+                paid_amount=maintenance_record.get('paid_amount', 0.0),
                 notes=maintenance_record['notes'],
                 created_at=maintenance_record["created_at"]
             )
@@ -404,13 +419,20 @@ async def update_maintenance_record(record_id: str, maintenance_record_update: M
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Maintenance record not found"
             )
+        if maintenance_record_update.paid_amount > maintenance_record_update.cost:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Paid Amount cannot be greater than Cost."
+            )
         result = db.update_maintenance_record(
                 record_id,
                 maintenance_record_update.sv_type, 
                 maintenance_record_update.sv_date,
+                maintenance_record_update.next_service_date,
                 maintenance_record_update.sv_mileage,
                 maintenance_record_update.sv_interval,
                 maintenance_record_update.cost,
+                maintenance_record_update.paid_amount,
                 maintenance_record_update.notes
         )
         if result:

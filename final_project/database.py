@@ -143,7 +143,7 @@ class DatabaseManager:
 
 # Maintenance record function
 
-    def create_maintenance_record(self, car_id, sv_type, sv_date, sv_mileage, sv_interval, cost, notes):
+    def create_maintenance_record(self, car_id, sv_type, sv_date,next_service_date, sv_mileage, sv_interval, cost, paid_amount, notes):
         try:
             if ObjectId.is_valid(car_id):
                 car_object_id = ObjectId(car_id)
@@ -154,9 +154,11 @@ class DatabaseManager:
                 "car_id": car_object_id,
                 "sv_type": sv_type,
                 "sv_date": sv_date,
+                "next_service_date": next_service_date,
                 "sv_mileage": sv_mileage,
                 "sv_interval": sv_interval,
                 "cost": cost,
+                "paid_amount": paid_amount,
                 "notes": notes,
                 "created_at": datetime.now()
             }
@@ -204,7 +206,7 @@ class DatabaseManager:
             print(f"Error fetching maintenance record: {e}")
             return None
 
-    def update_maintenance_record(self, record_id, sv_type, sv_date, sv_mileage, sv_interval, cost, notes):
+    def update_maintenance_record(self, record_id, sv_type, sv_date, next_service_date, sv_mileage, sv_interval, cost, paid_amount, notes):
         try:
             if ObjectId.is_valid(record_id):
                 maintenance_record_object_id = ObjectId(record_id)
@@ -214,9 +216,11 @@ class DatabaseManager:
             update_record = {
                 "sv_type": sv_type,
                 "sv_date": sv_date,
+                "next_service_date": next_service_date,
                 "sv_mileage": sv_mileage,
                 "sv_interval": sv_interval,
                 "cost": cost,
+                "paid_amount": paid_amount,
                 "notes": notes,
                 "updated_at": datetime.now()
                 }
