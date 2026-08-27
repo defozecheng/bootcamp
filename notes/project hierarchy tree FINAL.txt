@@ -1,0 +1,503 @@
+==================================================
+FINAL PROJECT HIERARCHY TREE
+Car Service Management System
+==================================================
+
+PROJECT OVERVIEW
+
+User
+│
+├── Staff
+│   └── Streamlit Staff Interface
+│
+└── Customer
+    └── Streamlit Customer Portal
+        │
+        ▼
+streamlit_app.py
+        │
+        ├── HTTP requests
+        ▼
+main.py (FastAPI backend)
+        │
+        ├── Pydantic validation
+        ├── API endpoints
+        └── DatabaseManager
+                │
+                ▼
+database.py
+                │
+                ▼
+MongoDB Atlas
+
+AI Flow
+│
+├── Staff Car Assistant
+│   ├── agents/chat_agent.py
+│   ├── utils/llm.py
+│   └── utils/tools.py
+│       └── MongoDB tools
+│
+└── Customer Car Assistant
+    ├── agents/customer_chat_agent.py
+    ├── utils/llm.py
+    └── vehicle context supplied by streamlit_app.py
+        └── no direct database tools
+
+
+==================================================
+1) database.py
+==================================================
+
+database.py
+│
+├── normalize_phone(phone)
+│
+└── class DatabaseManager
+    │
+    ├── __init__()
+    │   ├── connect MongoDB Atlas
+    │   ├── select car_maintenance_db
+    │   ├── cars collection
+    │   ├── maintenance_records collection
+    │   └── init_database()
+    │
+    ├── init_database()
+    │   ├── unique index: cars.car_plate
+    │   └── index: maintenance_records.car_id
+    │
+    ├── CUSTOMER / CAR FUNCTIONS
+    │   ├── get_car_by_customer(car_plate, phone)
+    │   ├── create_car(...)
+    │   ├── get_all_cars()
+    │   ├── get_car(car_id)
+    │   ├── update_car(...)
+    │   ├── update_car_mileage(...)
+    │   └── delete_car(...)
+    │
+    ├── MAINTENANCE RECORD FUNCTIONS
+    │   ├── create_maintenance_record(...)
+    │   │   ├── sv_type
+    │   │   ├── sv_date
+    │   │   ├── next_service_date
+    │   │   ├── sv_mileage
+    │   │   ├── sv_interval
+    │   │   ├── cost
+    │   │   ├── paid_amount
+    │   │   ├── notes
+    │   │   └── created_at
+    │   ├── get_car_maintenance_records(car_id)
+    │   ├── get_maintenance_record(record_id)
+    │   ├── update_maintenance_record(...)
+    │   └── delete_maintenance_record(record_id)
+    │
+    └── close_connection()
+
+
+==================================================
+2) main.py
+==================================================
+
+main.py
+│
+├── FastAPI app
+│
+├── PYDANTIC MODELS
+│   ├── CarCreate
+│   ├── CustomerLogin
+│   ├── CustomerMileageUpdate
+│   ├── CarResponse
+│   ├── MaintenanceRecordCreate
+│   │   ├── car_id
+│   │   ├── sv_type
+│   │   ├── sv_date
+│   │   ├── next_service_date
+│   │   ├── sv_mileage
+│   │   ├── sv_interval
+│   │   ├── cost
+│   │   ├── paid_amount
+│   │   └── notes
+│   └── MaintenanceRecordResponse
+│       ├── next_service_date optional
+│       └── paid_amount default = 0.0
+│
+├── CUSTOMER API
+│   ├── POST /customer/login
+│   └── PUT /customer/mileage
+│       └── prevents mileage decreasing
+│
+├── CAR API
+│   ├── POST /cars/
+│   ├── GET /cars/
+│   ├── GET /cars/{car_id}
+│   ├── PUT /cars/{car_id}
+│   └── DELETE /cars/{car_id}
+│
+└── MAINTENANCE RECORD API
+    ├── POST /maintenance_records/
+    │   ├── verify car
+    │   ├── prevent paid_amount > cost
+    │   ├── create record
+    │   └── update car mileage when needed
+    ├── GET /cars/{car_id}/maintenance_records
+    │   └── old records without paid_amount fall back to 0.0
+    ├── GET /maintenance_records/{record_id}
+    ├── PUT /maintenance_records/{record_id}
+    │   └── prevent paid_amount > cost
+    └── DELETE /maintenance_records/{record_id}
+
+
+==================================================
+3) streamlit_app.py
+==================================================
+
+streamlit_app.py
+│
+├── API helper functions
+│   ├── check_api_connection()
+│   ├── create/get/update/delete car
+│   └── create/get/update/delete maintenance record
+│
+├── main()
+│   │
+│   ├── check FastAPI connection
+│   ├── initialize session state
+│   │   ├── staff_logged_in
+│   │   └── customer_car
+│   │
+│   ├── NOT LOGGED IN
+│   │   ├── Customer Login
+│   │   └── Staff Login
+│   │
+│   ├── STAFF NAVIGATION
+│   │   ├── Car
+│   │   ├── Maintenance Records
+│   │   ├── Dashboard
+│   │   └── Car Assistant
+│   │
+│   └── CUSTOMER NAVIGATION
+│       ├── My Car
+│       ├── Service Status
+│       ├── Maintenance History
+│       └── Customer Car Assistant
+│
+├── STAFF PAGE: cars_page()
+│   ├── Add Car
+│   ├── View Cars
+│   └── Manage Car
+│       ├── Update
+│       └── Delete
+│
+├── STAFF PAGE: maintenance_record_page()
+│   ├── Create Maintenance Record
+│   │   ├── select car
+│   │   ├── service type
+│   │   ├── service date
+│   │   ├── next service date
+│   │   ├── current mileage at service
+│   │   ├── service interval
+│   │   ├── next service mileage
+│   │   ├── cost
+│   │   ├── paid amount
+│   │   ├── notes
+│   │   └── validation
+│   │       ├── paid amount <= cost
+│   │       └── next service date >= service date
+│   │
+│   ├── View Maintenance Record
+│   │   ├── formatted service date YYYY-MM-DD
+│   │   ├── current mileage at service
+│   │   ├── service interval
+│   │   ├── next service mileage
+│   │   ├── cost
+│   │   ├── paid amount
+│   │   ├── balance
+│   │   ├── notes
+│   │   └── created date
+│   │
+│   └── Manage Maintenance Record
+│       ├── Update Record
+│       └── Delete Record
+│
+├── STAFF PAGE: dashboard_page()
+│   ├── Total Cars
+│   ├── Maintenance Records
+│   ├── Estimated Service Value
+│   ├── Average Service Cost
+│   ├── Revenue Summary
+│   │   ├── Estimated Revenue = sum(cost)
+│   │   ├── Paid Revenue = sum(paid_amount)
+│   │   └── Outstanding = total_cost - total_paid
+│   └── Next Service Overview
+│       ├── latest record = highest sv_mileage
+│       ├── next service mileage
+│       ├── due_in
+│       └── status
+│           ├── Due / Overdue
+│           ├── Due Soon
+│           ├── OK
+│           └── No Record
+│
+├── STAFF PAGE: car_assistant_page()
+│   ├── uses create_chat_agent()
+│   ├── stores chat history in session_state.messages
+│   ├── answers general automotive questions
+│   └── can query vehicle data through tools
+│
+├── CUSTOMER PAGE: customer_portal_page()
+│   ├── car plate
+│   ├── phone
+│   ├── POST /customer/login
+│   └── save authenticated car in session state
+│
+├── CUSTOMER PAGE: customer_car_page()
+│   ├── show car details
+│   └── update current mileage
+│
+├── CUSTOMER PAGE: customer_service_status_page()
+│   ├── get maintenance records
+│   ├── latest record = highest sv_mileage
+│   ├── Last Service
+│   ├── Next Service
+│   ├── Due In / Overdue By
+│   ├── Status
+│   └── exact Next Service Date
+│
+├── CUSTOMER PAGE: customer_maintenance_history_page()
+│   ├── Service Date
+│   ├── Next Service Date
+│   ├── Mileage
+│   ├── Service Type
+│   ├── Cost
+│   └── Notes
+│
+└── CUSTOMER PAGE: customer_assistant_page()
+    ├── only current authenticated customer's vehicle
+    ├── no direct database tools
+    ├── receives vehicle context from Streamlit
+    ├── includes full maintenance history
+    ├── latest record = highest sv_mileage
+    ├── Python calculates
+    │   ├── next service mileage
+    │   └── due_in
+    ├── latest record is authoritative for current service questions
+    └── conversation history stored in customer_messages
+
+
+==================================================
+4) agents/chat_agent.py
+==================================================
+
+chat_agent.py
+│
+├── SYSTEM_PROMPT
+│   ├── staff car assistant
+│   ├── general automotive knowledge
+│   ├── use exact database service dates
+│   └── safety guardrails
+│
+└── create_chat_agent()
+    ├── model = llm
+    ├── tools = tools
+    └── system_prompt = SYSTEM_PROMPT
+
+
+==================================================
+5) agents/customer_chat_agent.py
+==================================================
+
+customer_chat_agent.py
+│
+├── CUSTOMER_SYSTEM_PROMPT
+│   ├── customer car assistant
+│   ├── privacy: own vehicle only
+│   ├── do not invent vehicle data
+│   ├── use exact recorded service data
+│   ├── latest maintenance record is authoritative
+│   └── safety guardrails
+│
+└── create_customer_chat_agent()
+    ├── model = llm
+    ├── tools = []
+    └── system_prompt = CUSTOMER_SYSTEM_PROMPT
+
+
+==================================================
+6) utils/llm.py
+==================================================
+
+llm.py
+│
+├── load GOOGLE_API_KEY
+├── load GEMINI_MODEL
+└── create ChatGoogleGenerativeAI llm
+
+
+==================================================
+7) utils/tools.py
+==================================================
+
+tools.py
+│
+├── get_car_data(car_plate)
+│   ├── car plate
+│   ├── brand
+│   ├── model
+│   ├── year
+│   └── current mileage
+│
+├── get_maintenance_history(car_plate)
+│   ├── service type
+│   ├── service date
+│   ├── next service date
+│   ├── service mileage
+│   ├── service interval
+│   ├── next service mileage
+│   ├── cost
+│   └── notes
+│
+└── tools = [get_car_data, get_maintenance_history]
+
+
+==================================================
+HOW EVERYTHING CONNECTS
+==================================================
+
+STAFF
+
+Staff
+│
+└── Streamlit
+    ├── Car Management
+    ├── Maintenance Records
+    ├── Dashboard
+    └── Car Assistant
+        │
+        ▼
+FastAPI
+        │
+        ▼
+DatabaseManager
+        │
+        ▼
+MongoDB Atlas
+
+
+CUSTOMER
+
+Customer Login
+│
+├── Car Plate
+└── Phone
+    │
+    ▼
+FastAPI verification
+    │
+    ▼
+Authenticated Customer
+    ├── My Car
+    ├── Service Status
+    ├── Maintenance History
+    └── Customer Car Assistant
+
+
+STAFF AI
+
+Staff Question
+│
+└── chat_agent.py
+    ├── Gemini
+    └── tools.py
+        │
+        ▼
+MongoDB Atlas
+        │
+        ▼
+Answer
+
+
+CUSTOMER AI
+
+Customer Question
+│
+└── streamlit_app.py
+    ├── authenticated car
+    ├── latest record
+    ├── full maintenance history
+    └── conversation history
+        │
+        ▼
+customer_chat_agent.py
+        │
+        ▼
+Gemini
+        │
+        ▼
+Answer
+
+Customer AI does not directly query other customer records.
+
+
+==================================================
+REVENUE LOGIC
+==================================================
+
+cost
+└── Estimated Revenue
+
+paid_amount
+└── Paid Revenue
+
+Outstanding
+└── Estimated Revenue - Paid Revenue
+
+
+==================================================
+SIMPLE PRESENTATION EXPLANATION
+==================================================
+
+database.py
+└── Handles MongoDB database operations.
+
+main.py
+└── FastAPI backend.
+    It validates requests and connects Streamlit to MongoDB.
+
+streamlit_app.py
+└── Main user interface for Staff and Customer.
+
+chat_agent.py
+└── Staff AI assistant with database tools.
+
+customer_chat_agent.py
+└── Customer AI assistant restricted to the logged-in customer's data.
+
+tools.py
+└── Database tools used by the Staff AI.
+
+llm.py
+└── Gemini model configuration.
+
+Overall architecture:
+
+Streamlit Frontend
+        ↓
+FastAPI Backend
+        ↓
+DatabaseManager
+        ↓
+MongoDB Atlas
+
+
+==================================================
+FUTURE IMPROVEMENTS
+==================================================
+
+├── Monthly revenue tracking
+├── Revenue charts / analytics
+├── Advanced staff authentication
+├── Role-based staff permissions
+├── Payment status / payment gateway
+├── Service reminders / notifications
+├── Appointment booking
+└── Multi-user production deployment
